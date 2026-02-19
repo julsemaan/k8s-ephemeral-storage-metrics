@@ -92,6 +92,13 @@ destroy_many_pods:
 release-docker:
 	GITHUB_TOKEN="${GITHUB_TOKEN}" VERSION="${VERSION}" ./scripts/release-docker.sh
 
+prepare-helm:
+	cd chart
+	sed -i "s/tag:.*/tag: ${VERSION}/g" values.yaml
+	sed -i "s/version:.*/version: ${VERSION}/g" Chart.yaml
+	sed -i "s/appVersion:.*/appVersion: ${VERSION}/g" Chart.yaml
+	cd ..
+
 release-helm:
 	cd chart
 	sed -i "s/tag:.*/tag: ${VERSION}/g" values.yaml
