@@ -1,10 +1,29 @@
 ## Helm Install
 
 ```bash
-helm repo add k8s-ephemeral-storage-metrics https://jmcgrath207.github.io/k8s-ephemeral-storage-metrics/chart
-helm repo update
-helm upgrade --install my-deployment k8s-ephemeral-storage-metrics/k8s-ephemeral-storage-metrics
+# Pull/install from GHCR OCI (when REGISTRY_TARGET=ghcr)
+helm upgrade --install my-deployment \
+  oci://ghcr.io/<github-owner>/charts/k8s-ephemeral-storage-metrics \
+  --version <version>
+
+# Pull/install from Docker Hub OCI (when REGISTRY_TARGET=dockerhub)
+helm upgrade --install my-deployment \
+  oci://registry-1.docker.io/<dockerhub-namespace>/charts/k8s-ephemeral-storage-metrics \
+  --version <version>
 ```
+
+## Automated Tag Release Configuration
+
+The workflow `.github/workflows/release-tag.yml` publishes on tag push using
+the repository variable `REGISTRY_TARGET`.
+
+- `REGISTRY_TARGET=ghcr` publishes the image/chart to GHCR.
+- `REGISTRY_TARGET=dockerhub` publishes the image/chart to Docker Hub.
+
+When using Docker Hub, configure these repository or organization secrets:
+
+- `DOCKERHUB_USERNAME`
+- `DOCKERHUB_TOKEN`
 
 {{ template "chart.valuesSection" . }}
 
