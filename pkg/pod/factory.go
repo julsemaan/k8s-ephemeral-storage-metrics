@@ -22,6 +22,8 @@ type Collector struct {
 	containerVolumeUsage            bool
 	containerLimitsPercentage       bool
 	containerVolumeLimitsPercentage bool
+	containerRootfsUsage            bool
+	containerLogsUsage              bool
 	inodes                          bool
 	lookup                          *map[string]pod
 	lookupMutex                     *sync.RWMutex
@@ -39,6 +41,8 @@ func NewCollector(sampleInterval int64) Collector {
 			"EPHEMERAL_STORAGE_CONTAINER_VOLUME_LIMITS_PERCENTAGE", "false",
 		),
 	)
+	containerRootfsUsage, _ := strconv.ParseBool(dev.GetEnv("EPHEMERAL_STORAGE_CONTAINER_ROOTFS_USAGE", "false"))
+	containerLogsUsage, _ := strconv.ParseBool(dev.GetEnv("EPHEMERAL_STORAGE_CONTAINER_LOGS_USAGE", "false"))
 	inodes, _ := strconv.ParseBool(dev.GetEnv("EPHEMERAL_STORAGE_INODES", "false"))
 	lookup := make(map[string]pod)
 
@@ -46,6 +50,8 @@ func NewCollector(sampleInterval int64) Collector {
 		containerVolumeUsage:            containerVolumeUsage,
 		containerLimitsPercentage:       containerLimitsPercentage,
 		containerVolumeLimitsPercentage: containerVolumeLimitsPercentage,
+		containerRootfsUsage:            containerRootfsUsage,
+		containerLogsUsage:              containerLogsUsage,
 		inodes:                          inodes,
 		lookup:                          &lookup,
 		lookupMutex:                     &lookupMutex,
