@@ -32,16 +32,31 @@ helm upgrade --install my-deployment \
 
 ## Automated Tag Release Configuration
 
-The workflow `.github/workflows/release-tag.yml` publishes on tag push using
-the repository variable `REGISTRY_TARGET`.
+The workflow `.github/workflows/release-tag.yml` publishes automatically when a
+tag is pushed and the tag matches one of these formats:
+
+- `X.Y.Z` (stable release)
+- `X.Y.Z-rcNN` (release candidate)
+
+Publishing target is controlled by the repository variable `REGISTRY_TARGET`.
 
 - `REGISTRY_TARGET=ghcr` publishes the image/chart to GHCR.
 - `REGISTRY_TARGET=dockerhub` publishes the image/chart to Docker Hub.
 
-When using Docker Hub, configure these repository or organization secrets:
+Release behavior:
+
+- Stable tags push image tags `<version>` and `latest`.
+- RC tags push only `<version>`.
+- The workflow validates that `chart/Chart.yaml` and `chart/values.yaml` match
+  the pushed tag version.
+
+When using Docker Hub (`REGISTRY_TARGET=dockerhub`), configure these repository
+or organization secrets:
 
 - `DOCKERHUB_USERNAME`
 - `DOCKERHUB_TOKEN`
+
+For maintainer release steps, see [`RELEASING.md`](RELEASING.md).
 
 ## Values
 
