@@ -85,31 +85,7 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.version }}
         shell: bash
         run: |
-          set -euo pipefail
-
-          CHART_VERSION="$(sed -n -E 's/^version:[[:space:]]*//p' chart/Chart.yaml | head -n1)"
-          CHART_APP_VERSION="$(sed -n -E 's/^appVersion:[[:space:]]*//p' chart/Chart.yaml | head -n1)"
-          VALUES_IMAGE_TAG="$(sed -n -E 's/^[[:space:]]*tag:[[:space:]]*//p' chart/values.yaml | head -n1)"
-
-          if [[ -z "${CHART_VERSION}" || -z "${CHART_APP_VERSION}" || -z "${VALUES_IMAGE_TAG}" ]]; then
-            echo "Failed to read release versions from chart/Chart.yaml or chart/values.yaml"
-            exit 1
-          fi
-
-          if [[ "${VALUES_IMAGE_TAG}" != "${CHART_VERSION}" || "${VALUES_IMAGE_TAG}" != "${CHART_APP_VERSION}" ]]; then
-            echo "Release version mismatch detected:"
-            echo "  chart/values.yaml image.tag=${VALUES_IMAGE_TAG}"
-            echo "  chart/Chart.yaml version=${CHART_VERSION}"
-            echo "  chart/Chart.yaml appVersion=${CHART_APP_VERSION}"
-            exit 1
-          fi
-
-          if [[ "${VERSION}" != "${VALUES_IMAGE_TAG}" ]]; then
-            echo "Release tag does not match chart values:"
-            echo "  git tag version=${VERSION}"
-            echo "  chart/values.yaml image.tag=${VALUES_IMAGE_TAG}"
-            exit 1
-          fi
+          ./scripts/validate-release-version.sh "${VERSION}"
 
       - uses: docker/setup-qemu-action@v3
 
@@ -167,6 +143,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: azure/setup-helm@v4
+
+      - name: Validate release version consistency
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        shell: bash
+        run: ./scripts/validate-release-version.sh "${VERSION}"
 
       - name: Prepare and package chart
         env:
