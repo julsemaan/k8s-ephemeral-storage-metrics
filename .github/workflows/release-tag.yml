@@ -25,14 +25,18 @@ jobs:
           set -euo pipefail
 
           VERSION="${GITHUB_REF_NAME}"
-          if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$ ]]; then
+          VERSION="${VERSION#v}"
+
+          # Accept semver tags with optional prerelease/build metadata.
+          # Examples: 1.0.5, 1.0.5-rc2, 1.0.5-beta.1, 1.0.5+build.1
+          if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
             echo "Unsupported tag format: ${VERSION}"
-            echo "Expected one of: X.Y.Z or X.Y.Z-rcNN"
+            echo "Expected semantic version: X.Y.Z with optional -prerelease and/or +build metadata"
             exit 1
           fi
 
           IS_PRERELEASE="false"
-          if [[ "${VERSION}" == *"-rc"* ]]; then
+          if [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+- ]]; then
             IS_PRERELEASE="true"
           fi
 
