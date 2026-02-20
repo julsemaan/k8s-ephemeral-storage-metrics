@@ -24,6 +24,7 @@ jobs:
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          DOCKER_IMAGE_REPO: ${{ secrets.DOCKER_IMAGE_REPO }}
         shell: bash
         run: |
           set -euo pipefail
@@ -50,7 +51,10 @@ jobs:
             IS_PRERELEASE="true"
           fi
 
-          IMAGE_REPO="docker.io/${DOCKER_USERNAME}/k8s-ephemeral-storage-metrics"
+          IMAGE_REPO="${DOCKER_IMAGE_REPO:-}"
+          if [[ -z "${IMAGE_REPO}" ]]; then
+            IMAGE_REPO="docker.io/${DOCKER_USERNAME}/k8s-ephemeral-storage-metrics"
+          fi
 
           {
             echo "version=${VERSION}"
