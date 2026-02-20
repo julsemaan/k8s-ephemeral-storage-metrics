@@ -19,10 +19,41 @@ This project does not monitor CSI backed ephemeral storage ex. [Generic ephemera
 ## Helm Install
 
 ```bash
-helm repo add k8s-ephemeral-storage-metrics https://jmcgrath207.github.io/k8s-ephemeral-storage-metrics/chart
+helm repo add kubex https://densify-dev.github.io/helm-charts
 helm repo update
-helm upgrade --install my-deployment k8s-ephemeral-storage-metrics/k8s-ephemeral-storage-metrics
+helm upgrade --install my-deployment kubex/k8s-ephemeral-storage-metrics
 ```
+
+## Automated Tag Release (Image Only)
+
+The workflow `.github/workflows/release-tag.yml` publishes Docker images when a
+tag is pushed and matches one of:
+
+- `X.Y.Z` (stable)
+- `X.Y.Z-rcNN` (release candidate)
+
+Publishing target is Docker Hub.
+
+Configure:
+
+- `DOCKER_USERNAME`
+- `DOCKER_PASSWORD`
+- `DOCKER_IMAGE_REPO` (optional; GitHub Actions variable, not a secret)
+
+`DOCKER_IMAGE_REPO` behavior (from `.github/workflows/release-tag.yml`):
+
+- If unset or empty, the workflow defaults to
+  `docker.io/${DOCKER_USERNAME}/k8s-ephemeral-storage-metrics`.
+- Leading/trailing whitespace is trimmed and a trailing `/` is removed.
+- If the resolved repo is still empty or contains whitespace, the workflow
+  fails before publishing.
+
+Tag behavior:
+
+- Stable tags publish `<version>` and `latest`.
+- RC tags publish only `<version>`.
+
+Maintainer steps are documented in [`RELEASING.md`](RELEASING.md).
 
 ## Values
 
