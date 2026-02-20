@@ -27,5 +27,4 @@ Check the GitHub Actions run for that tag completed and image artifacts were pus
 ## Registry Configuration
 
 - Set repository variable `REGISTRY_TARGET` to `ghcr` or `dockerhub`.
-- If using Docker Hub, set `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets.
-
+- If using Docker Hub, set `DOCKER_USERNAME` and `DOCKER_PASSWORD` secrets.

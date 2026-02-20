@@ -39,8 +39,8 @@ Publishing target is controlled by the repository variable `REGISTRY_TARGET`:
 
 For Docker Hub, configure:
 
-- `DOCKERHUB_USERNAME`
-- `DOCKERHUB_TOKEN`
+- `DOCKER_USERNAME`
+- `DOCKER_PASSWORD`
 
 Tag behavior:
 
