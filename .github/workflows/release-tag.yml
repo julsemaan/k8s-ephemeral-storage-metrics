@@ -18,13 +18,8 @@ jobs:
     outputs:
       version: ${{ steps.prepare.outputs.version }}
       is_prerelease: ${{ steps.prepare.outputs.is_prerelease }}
-      image_repo: ${{ steps.prepare.outputs.image_repo }}
     steps:
       - id: prepare
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          DOCKER_IMAGE_REPO: ${{ secrets.DOCKER_IMAGE_REPO }}
         shell: bash
         run: |
           set -euo pipefail
@@ -36,37 +31,14 @@ jobs:
             exit 1
           fi
 
-          if [[ -z "${DOCKER_USERNAME:-}" ]]; then
-            echo "DOCKER_USERNAME secret is required"
-            exit 1
-          fi
-
-          if [[ -z "${DOCKER_PASSWORD:-}" ]]; then
-            echo "DOCKER_PASSWORD secret is required"
-            exit 1
-          fi
-
           IS_PRERELEASE="false"
           if [[ "${VERSION}" == *"-rc"* ]]; then
             IS_PRERELEASE="true"
           fi
 
-          IMAGE_REPO="${DOCKER_IMAGE_REPO:-}"
-          IMAGE_REPO="$(echo "${IMAGE_REPO}" | xargs)"
-          if [[ -z "${IMAGE_REPO}" ]]; then
-            IMAGE_REPO="docker.io/${DOCKER_USERNAME}/k8s-ephemeral-storage-metrics"
-          fi
-          IMAGE_REPO="${IMAGE_REPO%/}"
-          if [[ -z "${IMAGE_REPO}" || "${IMAGE_REPO}" == *[[:space:]]* ]]; then
-            echo "Invalid resolved image repo: '${IMAGE_REPO}'"
-            echo "Set DOCKER_IMAGE_REPO to a non-empty repo (example: docker.io/<user>/k8s-ephemeral-storage-metrics)"
-            exit 1
-          fi
-
           {
             echo "version=${VERSION}"
             echo "is_prerelease=${IS_PRERELEASE}"
-            echo "image_repo=${IMAGE_REPO}"
           } >> "${GITHUB_OUTPUT}"
 
   publish-image:
@@ -79,14 +51,37 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      - name: Validate resolved image repo
+      - name: Resolve image repo
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          DOCKER_IMAGE_REPO: ${{ secrets.DOCKER_IMAGE_REPO }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${{ needs.prepare.outputs.image_repo }}" ]]; then
-            echo "Resolved image_repo is empty; check DOCKER_IMAGE_REPO/DOCKER_USERNAME secrets and prepare job output."
+          if [[ -z "${DOCKER_USERNAME:-}" ]]; then
+            echo "DOCKER_USERNAME secret is required"
             exit 1
           fi
+          if [[ -z "${DOCKER_PASSWORD:-}" ]]; then
+            echo "DOCKER_PASSWORD secret is required"
+            exit 1
+          fi
+
+          IMAGE_REPO="${DOCKER_IMAGE_REPO:-}"
+          IMAGE_REPO="$(echo "${IMAGE_REPO}" | xargs)"
+          if [[ -z "${IMAGE_REPO}" ]]; then
+            IMAGE_REPO="docker.io/${DOCKER_USERNAME}/k8s-ephemeral-storage-metrics"
+          fi
+          IMAGE_REPO="${IMAGE_REPO%/}"
+
+          if [[ -z "${IMAGE_REPO}" || "${IMAGE_REPO}" == *[[:space:]]* ]]; then
+            echo "Invalid resolved image repo: '${IMAGE_REPO}'"
+            echo "Set DOCKER_IMAGE_REPO to a non-empty repo (example: docker.io/<user>/k8s-ephemeral-storage-metrics)"
+            exit 1
+          fi
+
+          echo "IMAGE_REPO=${IMAGE_REPO}" >> "${GITHUB_ENV}"
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -102,7 +97,7 @@ jobs:
           file: Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ needs.prepare.outputs.image_repo }}:${{ needs.prepare.outputs.version }}
+          tags: ${{ env.IMAGE_REPO }}:${{ needs.prepare.outputs.version }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -117,8 +112,8 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ needs.prepare.outputs.image_repo }}:${{ needs.prepare.outputs.version }}
-            ${{ needs.prepare.outputs.image_repo }}:latest
+            ${{ env.IMAGE_REPO }}:${{ needs.prepare.outputs.version }}
+            ${{ env.IMAGE_REPO }}:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
