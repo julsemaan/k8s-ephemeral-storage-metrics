@@ -32,12 +32,9 @@ tag is pushed and matches one of:
 - `X.Y.Z` (stable)
 - `X.Y.Z-rcNN` (release candidate)
 
-Publishing target is controlled by the repository variable `REGISTRY_TARGET`:
+Publishing target is Docker Hub.
 
-- `ghcr` publishes to GHCR.
-- `dockerhub` publishes to Docker Hub.
-
-For Docker Hub, configure:
+Configure:
 
 - `DOCKER_USERNAME`
 - `DOCKER_PASSWORD`

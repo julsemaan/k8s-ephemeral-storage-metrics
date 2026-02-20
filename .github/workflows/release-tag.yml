@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -19,14 +18,12 @@ jobs:
     outputs:
       version: ${{ steps.prepare.outputs.version }}
       is_prerelease: ${{ steps.prepare.outputs.is_prerelease }}
-      registry_target: ${{ steps.prepare.outputs.registry_target }}
       image_repo: ${{ steps.prepare.outputs.image_repo }}
-      registry_host: ${{ steps.prepare.outputs.registry_host }}
     steps:
       - id: prepare
         env:
-          REGISTRY_TARGET: ${{ vars.REGISTRY_TARGET }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
@@ -38,9 +35,13 @@ jobs:
             exit 1
           fi
 
-          REGISTRY_TARGET_LOWER="$(echo "${REGISTRY_TARGET:-}" | tr '[:upper:]' '[:lower:]')"
-          if [[ "${REGISTRY_TARGET_LOWER}" != "ghcr" && "${REGISTRY_TARGET_LOWER}" != "dockerhub" ]]; then
-            echo "vars.REGISTRY_TARGET must be 'ghcr' or 'dockerhub'. Current value: '${REGISTRY_TARGET:-<empty>}'"
+          if [[ -z "${DOCKER_USERNAME:-}" ]]; then
+            echo "DOCKER_USERNAME secret is required"
+            exit 1
+          fi
+
+          if [[ -z "${DOCKER_PASSWORD:-}" ]]; then
+            echo "DOCKER_PASSWORD secret is required"
             exit 1
           fi
 
@@ -49,24 +50,11 @@ jobs:
             IS_PRERELEASE="true"
           fi
 
-          if [[ "${REGISTRY_TARGET_LOWER}" == "ghcr" ]]; then
-            REGISTRY_HOST="ghcr.io"
-            IMAGE_REPO="ghcr.io/${GITHUB_REPOSITORY_OWNER}/k8s-ephemeral-storage-metrics"
-          else
-            if [[ -z "${DOCKER_USERNAME:-}" ]]; then
-              echo "DOCKER_USERNAME secret is required when REGISTRY_TARGET=dockerhub"
-              exit 1
-            fi
-
-            REGISTRY_HOST="registry-1.docker.io"
-            IMAGE_REPO="docker.io/${DOCKER_USERNAME}/k8s-ephemeral-storage-metrics"
-          fi
+          IMAGE_REPO="docker.io/${DOCKER_USERNAME}/k8s-ephemeral-storage-metrics"
 
           {
             echo "version=${VERSION}"
             echo "is_prerelease=${IS_PRERELEASE}"
-            echo "registry_target=${REGISTRY_TARGET_LOWER}"
-            echo "registry_host=${REGISTRY_HOST}"
             echo "image_repo=${IMAGE_REPO}"
           } >> "${GITHUB_OUTPUT}"
 
@@ -80,16 +68,7 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      - name: Login to GHCR
-        if: needs.prepare.outputs.registry_target == 'ghcr'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Login to Docker Hub
-        if: needs.prepare.outputs.registry_target == 'dockerhub'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
