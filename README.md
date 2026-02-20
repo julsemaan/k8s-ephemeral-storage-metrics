@@ -19,44 +19,35 @@ This project does not monitor CSI backed ephemeral storage ex. [Generic ephemera
 ## Helm Install
 
 ```bash
-# Pull/install from GHCR OCI (when REGISTRY_TARGET=ghcr)
-helm upgrade --install my-deployment \
-  oci://ghcr.io/<github-owner>/charts/k8s-ephemeral-storage-metrics \
-  --version <version>
-
-# Pull/install from Docker Hub OCI (when REGISTRY_TARGET=dockerhub)
-helm upgrade --install my-deployment \
-  oci://registry-1.docker.io/<dockerhub-namespace>/charts/k8s-ephemeral-storage-metrics \
-  --version <version>
+helm repo add densify-dev https://densify-dev.github.io/helm-charts
+helm repo update
+helm upgrade --install my-deployment densify-dev/k8s-ephemeral-storage-metrics
 ```
 
-## Automated Tag Release Configuration
+## Automated Tag Release (Image Only)
 
-The workflow `.github/workflows/release-tag.yml` publishes automatically when a
-tag is pushed and the tag matches one of these formats:
+The workflow `.github/workflows/release-tag.yml` publishes Docker images when a
+tag is pushed and matches one of:
 
-- `X.Y.Z` (stable release)
+- `X.Y.Z` (stable)
 - `X.Y.Z-rcNN` (release candidate)
 
-Publishing target is controlled by the repository variable `REGISTRY_TARGET`.
+Publishing target is controlled by the repository variable `REGISTRY_TARGET`:
 
-- `REGISTRY_TARGET=ghcr` publishes the image/chart to GHCR.
-- `REGISTRY_TARGET=dockerhub` publishes the image/chart to Docker Hub.
+- `ghcr` publishes to GHCR.
+- `dockerhub` publishes to Docker Hub.
 
-Release behavior:
-
-- Stable tags push image tags `<version>` and `latest`.
-- RC tags push only `<version>`.
-- The workflow validates that `chart/Chart.yaml` and `chart/values.yaml` match
-  the pushed tag version.
-
-When using Docker Hub (`REGISTRY_TARGET=dockerhub`), configure these repository
-or organization secrets:
+For Docker Hub, configure:
 
 - `DOCKERHUB_USERNAME`
 - `DOCKERHUB_TOKEN`
 
-For maintainer release steps, see [`RELEASING.md`](RELEASING.md).
+Tag behavior:
+
+- Stable tags publish `<version>` and `latest`.
+- RC tags publish only `<version>`.
+
+Maintainer steps are documented in [`RELEASING.md`](RELEASING.md).
 
 ## Values
 

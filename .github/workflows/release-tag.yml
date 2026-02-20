@@ -21,7 +21,6 @@ jobs:
       is_prerelease: ${{ steps.prepare.outputs.is_prerelease }}
       registry_target: ${{ steps.prepare.outputs.registry_target }}
       image_repo: ${{ steps.prepare.outputs.image_repo }}
-      helm_oci_repo: ${{ steps.prepare.outputs.helm_oci_repo }}
       registry_host: ${{ steps.prepare.outputs.registry_host }}
     steps:
       - id: prepare
@@ -53,7 +52,6 @@ jobs:
           if [[ "${REGISTRY_TARGET_LOWER}" == "ghcr" ]]; then
             REGISTRY_HOST="ghcr.io"
             IMAGE_REPO="ghcr.io/${GITHUB_REPOSITORY_OWNER}/k8s-ephemeral-storage-metrics"
-            HELM_OCI_REPO="oci://ghcr.io/${GITHUB_REPOSITORY_OWNER}/charts"
           else
             if [[ -z "${DOCKERHUB_USERNAME:-}" ]]; then
               echo "DOCKERHUB_USERNAME secret is required when REGISTRY_TARGET=dockerhub"
@@ -62,7 +60,6 @@ jobs:
 
             REGISTRY_HOST="registry-1.docker.io"
             IMAGE_REPO="docker.io/${DOCKERHUB_USERNAME}/k8s-ephemeral-storage-metrics"
-            HELM_OCI_REPO="oci://registry-1.docker.io/${DOCKERHUB_USERNAME}/charts"
           fi
 
           {
@@ -71,7 +68,6 @@ jobs:
             echo "registry_target=${REGISTRY_TARGET_LOWER}"
             echo "registry_host=${REGISTRY_HOST}"
             echo "image_repo=${IMAGE_REPO}"
-            echo "helm_oci_repo=${HELM_OCI_REPO}"
           } >> "${GITHUB_OUTPUT}"
 
   publish-image:
@@ -79,13 +75,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Validate release version consistency
-        env:
-          VERSION: ${{ needs.prepare.outputs.version }}
-        shell: bash
-        run: |
-          ./scripts/validate-release-version.sh "${VERSION}"
 
       - uses: docker/setup-qemu-action@v3
 
@@ -135,62 +124,3 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
-
-  publish-helm-oci:
-    needs: prepare
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: azure/setup-helm@v4
-
-      - name: Validate release version consistency
-        env:
-          VERSION: ${{ needs.prepare.outputs.version }}
-        shell: bash
-        run: ./scripts/validate-release-version.sh "${VERSION}"
-
-      - name: Prepare and package chart
-        env:
-          VERSION: ${{ needs.prepare.outputs.version }}
-          IMAGE_REPO: ${{ needs.prepare.outputs.image_repo }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          sed -i -E "s/^version:.*/version: ${VERSION}/" chart/Chart.yaml
-          sed -i -E "s/^appVersion:.*/appVersion: ${VERSION}/" chart/Chart.yaml
-          sed -i -E "s|^  repository:.*|  repository: ${IMAGE_REPO}|" chart/values.yaml
-          sed -i -E "s/^  tag:.*/  tag: ${VERSION}/" chart/values.yaml
-
-          helm lint ./chart
-          mkdir -p dist
-          helm package ./chart --version "${VERSION}" --app-version "${VERSION}" --destination dist
-
-      - name: Login to GHCR Helm registry
-        if: needs.prepare.outputs.registry_target == 'ghcr'
-        shell: bash
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io \
-            --username "${{ github.actor }}" \
-            --password-stdin
-
-      - name: Login to Docker Hub Helm registry
-        if: needs.prepare.outputs.registry_target == 'dockerhub'
-        shell: bash
-        run: |
-          if [[ -z "${{ secrets.DOCKERHUB_USERNAME }}" || -z "${{ secrets.DOCKERHUB_TOKEN }}" ]]; then
-            echo "DOCKERHUB_USERNAME and DOCKERHUB_TOKEN are required when REGISTRY_TARGET=dockerhub"
-            exit 1
-          fi
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | helm registry login registry-1.docker.io \
-            --username "${{ secrets.DOCKERHUB_USERNAME }}" \
-            --password-stdin
-
-      - name: Push chart to OCI registry
-        env:
-          HELM_OCI_REPO: ${{ needs.prepare.outputs.helm_oci_repo }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          CHART_TGZ="$(ls dist/k8s-ephemeral-storage-metrics-*.tgz)"
-          helm push "${CHART_TGZ}" "${HELM_OCI_REPO}"
